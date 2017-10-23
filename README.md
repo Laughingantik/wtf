@@ -11,9 +11,14 @@ Install dependencies with [pipenv](https://github.com/kennethreitz/pipenv):
 $ pipenv install
 ```
 
-Run the project:
+Start the API:
 ```bash
-$ FLASK_APP=run.py pipenv run flask run
+$ FLASK_APP=api/app.py pipenv run flask run
+```
+
+Start the web app:
+```bash
+$ FLASK_APP=app/app.py pipenv run flask run
 ```
 
 ## contributing

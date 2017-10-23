@@ -32,36 +32,6 @@ Separating this functionality within the **RESTful API** component, instead of i
 For more information about this architectural pattern, please see:
   - [Wikipedia: Representational state transfer](https://en.wikipedia.org/wiki/Representational_state_transfer)
 
-## directory structure
-
-```
-.
-├── CONTRIBUTING.md   # contributing documentation
-│
-├── Pipfile           # project environment requirements
-├── Pipfile.lock      # project environment details
-│
-├── README.md         # high-level project documentation
-│
-├── api               # RESTful API
-│   ├── accounts      #   accounts resource
-│   ├── characters    #   characters resource
-│   ├── fights        #   fights resource
-│   └── run.py        #   script to start the API Flask web server
-│
-├── app               # web app
-│   ├── static        #   static assets
-│   ├── templates     #   Jinja2 templates
-│   ├── views         #   Flask view routes
-│   └── run.py        #   script to start the web app Flask web server
-│
-├── db                # database
-│   └── migrations    #   schema/data migration scripts
-│
-└── run.py            # script to start both the RESTful API and the web app
-                      #   mounted in the same Flask web server
-```
-
 ## environment setup
 
 It should go without saying that you will need [git](https://git-scm.com/) and a [GitHub](https://github.com/) account in order to checkout and make contributions to this project's codebase. If these tools are new to you or you're uncomfortable using them, please refer to our [git and github primer](#git-and-github-primer).
@@ -82,14 +52,28 @@ $ pipenv --help
 
 ## developing
 
-To run only the API:
+**Note:** It's easier to work from the subshell created by `pipenv shell`. If you use `pipenv shell`, you can omit `pipenv run` in the commands below.
+
+To lint each module:
 ```bash
-$ FLASK_APP=api/run.py pipenv run flask run
+$ pipenv run pylint api/api
+$ pipenv run pylint api/tests
+# ...
 ```
 
-To run only the web app:
+To run the tests
 ```bash
-$ FLASK_APP=app/run.py pipenv run flask run
+$ pipenv run pytest
+```
+
+To start the API:
+```bash
+$ FLASK_APP=api/app.py pipenv run flask run
+```
+
+To start the web app:
+```bash
+$ FLASK_APP=app/app.py pipenv run flask run
 ```
 
 ## continuous integration
@@ -288,7 +272,7 @@ You can also change the editor to something other than `vi`, but that's beyond t
 
 When you're done rebasing, you can issue a force push to update your remote:
 ```bash
-git push -f origin my-branch
+$ git push -f origin my-branch
 ```
 
 Try experimenting with smaller rebases until you get the hang of it, then you can tackle more complicated rebasing.

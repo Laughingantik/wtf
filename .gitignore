@@ -1,4 +1,11 @@
 
 # compiled files
-__pycache__
 *.pyc
+
+# caches
+__pycache__
+.cache
+
+# coverage data
+.coverage
+htmlcov
