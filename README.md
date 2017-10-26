@@ -2,6 +2,8 @@
 
 War Torn Faith is a browser-based text RPG.
 
+[![Build Status](https://travis-ci.org/mrpudn/wtf.svg?branch=master)](https://travis-ci.org/mrpudn/wtf)
+
 ## getting started
 
 If you aren't familiar with Git and/or GitHub, you can refer to our [primer](CONTRIBUTING.md#git-and-github-primer) for more info.
