@@ -2,6 +2,7 @@
     Account: a model of an account in War Torn Faith
     register: registers a blueprint for account operations to a Flask app
 '''
+from uuid import uuid4
 from flask import Blueprint
 
 
@@ -14,11 +15,22 @@ class Account(object):
         username: the player's public identity
     '''
 
-    def __init__(self):
+    def __init__(self, uuid=None, email='', password='', username=''):
         '''Initialize an account'''
-        self._email = ''
-        self._password = ''
-        self._username = ''
+        self._uuid = uuid or uuid4()
+        self._email = email
+        self._password = password
+        self._username = username
+
+    @property
+    def uuid(self):
+        '''Get the account's UUID'''
+        return self._uuid
+
+    @uuid.setter
+    def uuid(self, value):
+        '''Set the account's UUID'''
+        self._uuid = value
 
     @property
     def email(self):
