@@ -1,5 +1,6 @@
 '''The accounts module contains the following:
     Account: a model of an account in War Torn Faith
+    AccountRepository: provides the ability to store and retrieve accounts
     register: registers a blueprint for account operations to a Flask app
 '''
 from hashlib import sha256
@@ -11,6 +12,7 @@ class Account(object):
     '''Accounts are created by the players of War Torn Faith
 
     Accounts have the following properties:
+        uuid: a "universally unique identifier" for the account
         email: an email address that the player can be reached at
         password: the password used to authenticate as the account
         username: the player's public identity
@@ -64,10 +66,62 @@ class Account(object):
         self._username = value
 
 
-def salt_and_hash(value):
+class AccountRepository(object):
+    '''The AccountRepository provides the ability to store and retrieve accounts
+
+    `save` persists an account - it creates a new account if one does not
+        already exist, or updates an existing one.
+
+    `find_by_uuid()`, `find_by_email()`, and `find_by_username()` retrieves an
+        account by one of the three uniquely identifying fields: uuid, email, or
+        username, respectively.
+
+    `authenticate()` confirms the authenticity of an email and password
+        combination that is presumably being supplied by a user in order to gain
+        access to an account. It will return `True` if the combination matches
+        an account on record and False otherwise.
+    '''
+
+    def __init__(self):
+        '''Initialize an account repository'''
+        self.by_uuid = {}
+        self.by_email = {}
+        self.by_username = {}
+
+    def save(self, account):
+        '''Save an account'''
+        self.by_uuid[account.uuid] = account
+        self.by_email[account.email] = account
+        self.by_username[account.username] = account
+
+    def find_by_uuid(self, uuid):
+        '''Find an account by a UUID'''
+        return self.by_uuid.get(uuid)
+
+    def find_by_email(self, email):
+        '''Find an account by an email address'''
+        return self.by_email.get(email)
+
+    def find_by_username(self, username):
+        '''Find an account by a username'''
+        return self.by_username.get(username)
+
+    def authenticate(self, email, password):
+        '''Perform an authentication check with an email and password'''
+        account = self.find_by_email(email)
+        authentic = False
+        if account is not None:
+            # the salt is the first 64 characters of the password
+            salt = account.password[:64]
+            authentic = salt_and_hash(password, salt) == account.password
+        return authentic
+
+
+def salt_and_hash(value, salt=None):
     '''Salt and hash a value'''
-    salt = sha256(uuid4())
-    return salt + sha256(salt + value)
+    if salt is None:
+        salt = sha256(uuid4().bytes).hexdigest()
+    return salt + sha256(str.encode(salt + value)).hexdigest()
 
 
 def get_accounts():
