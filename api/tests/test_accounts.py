@@ -1,6 +1,7 @@
-# pylint: disable=missing-docstring,invalid-name
+# pylint: disable=missing-docstring,invalid-name,redefined-outer-name
+import pytest
 from mock import patch
-from api.accounts import Account, AccountRepository
+from api.accounts import IN_MEMORY_ACCOUNTS, Account, AccountRepository
 
 
 TEST_EMAIL = 'foobar@gmail.com'
@@ -10,6 +11,15 @@ TEST_PASSWORD_HASH = (
     + '012eab80b72cbfe663429219e920aee8cd17ba8893e302844682104ee88d3145'
 )
 TEST_USERNAME = 'foobar'
+
+
+@pytest.fixture
+def repo():
+    # clear out the accounts in memory:
+    IN_MEMORY_ACCOUNTS['by_uuid'] = {}
+    IN_MEMORY_ACCOUNTS['by_email'] = {}
+    IN_MEMORY_ACCOUNTS['by_username'] = {}
+    return AccountRepository()
 
 
 @patch('api.accounts.uuid4')
@@ -104,51 +114,45 @@ def test_account_equality_misc():
     assert Account() != None
 
 
-def test_find_account_by_uuid():
+def test_find_account_by_uuid(repo):
     account = Account(username=TEST_USERNAME)
-    repo = AccountRepository()
     repo.save(account)
     # todo: weak equality check
     assert repo.find_by_uuid(account.uuid) == account
     assert repo.find_by_uuid('asdf') is None
 
 
-def test_find_account_by_email():
+def test_find_account_by_email(repo):
     account = Account(email=TEST_EMAIL)
-    repo = AccountRepository()
     repo.save(account)
     # todo: weak equality check
     assert repo.find_by_email(TEST_EMAIL) == account
     assert repo.find_by_email('asdf') is None
 
 
-def test_find_account_by_username():
+def test_find_account_by_username(repo):
     account = Account(username=TEST_USERNAME)
-    repo = AccountRepository()
     repo.save(account)
     # todo: weak equality check
     assert repo.find_by_username(TEST_USERNAME) == account
     assert repo.find_by_username('asdf') is None
 
 
-def test_find_account_by_email_password():
+def test_find_account_by_email_password(repo):
     expected = Account(email=TEST_EMAIL)
     # salt and hash the password:
     expected.password = TEST_PASSWORD_PLAIN
-    repo = AccountRepository()
     repo.save(expected)
     actual = repo.find_by_email_password(TEST_EMAIL, TEST_PASSWORD_PLAIN)
     assert actual == expected
 
 
-def test_find_account_by_email_password_incorrect_password():
-    repo = AccountRepository()
+def test_find_account_by_email_password_incorrect_password(repo):
     repo.save(Account(email=TEST_EMAIL, password=TEST_PASSWORD_HASH))
     assert repo.find_by_email_password(TEST_EMAIL, 'asdf42') is None
 
 
-def test_find_account_by_email_password_not_found():
-    repo = AccountRepository()
+def test_find_account_by_email_password_not_found(repo):
     assert repo.find_by_email_password(TEST_EMAIL, TEST_PASSWORD_PLAIN) is None
 
 
