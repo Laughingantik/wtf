@@ -9,3 +9,7 @@ __pycache__
 # coverage data
 .coverage
 htmlcov
+
+# junk
+.DS_Store
+

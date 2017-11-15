@@ -3,9 +3,16 @@
     AccountRepository: provides the ability to store and retrieve accounts
     register: registers a blueprint for account operations to a Flask app
 '''
-from hashlib import sha256
 from uuid import uuid4
 from flask import Blueprint
+from .util import salt_and_hash
+
+
+IN_MEMORY_ACCOUNTS = {
+    'by_uuid': {},
+    'by_email': {},
+    'by_username': {}
+}
 
 
 class Account(object):
@@ -65,28 +72,42 @@ class Account(object):
         '''Set the account's username'''
         self._username = value
 
+    def __eq__(self, other):
+        '''Compare this account with another account'''
+        return (
+            isinstance(other, Account)
+            and self.uuid == other.uuid
+            and self.email == other.email
+            and self.password == other.password
+            and self.username == other.username
+        )
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
 
 class AccountRepository(object):
     '''The AccountRepository provides the ability to store and retrieve accounts
 
-    `save` persists an account - it creates a new account if one does not
+    `save()` persists an account - it creates a new account if one does not
         already exist, or updates an existing one.
 
     `find_by_uuid()`, `find_by_email()`, and `find_by_username()` retrieves an
         account by one of the three uniquely identifying fields: uuid, email, or
         username, respectively.
 
-    `authenticate()` confirms the authenticity of an email and password
-        combination that is presumably being supplied by a user in order to gain
-        access to an account. It will return `True` if the combination matches
-        an account on record and False otherwise.
+    `find_by_email_password()` retrieves an account by an email address and
+        password combination. This function is intended to be used with account
+        authentication - it will return `None` if the supplied email and
+        password combination is incorrect. Note that the password is the
+        account's plaintext password.
     '''
 
     def __init__(self):
         '''Initialize an account repository'''
-        self.by_uuid = {}
-        self.by_email = {}
-        self.by_username = {}
+        self.by_uuid = IN_MEMORY_ACCOUNTS.get('by_uuid')
+        self.by_email = IN_MEMORY_ACCOUNTS.get('by_email')
+        self.by_username = IN_MEMORY_ACCOUNTS.get('by_username')
 
     def save(self, account):
         '''Save an account'''
@@ -95,42 +116,30 @@ class AccountRepository(object):
         self.by_username[account.username] = account
 
     def find_by_uuid(self, uuid):
-        '''Find an account by a UUID'''
+        '''Find an account with the given UUID'''
         return self.by_uuid.get(uuid)
 
     def find_by_email(self, email):
-        '''Find an account by an email address'''
+        '''Find an account with the given email address'''
         return self.by_email.get(email)
 
     def find_by_username(self, username):
-        '''Find an account by a username'''
+        '''Find an account with the given username'''
         return self.by_username.get(username)
 
-    def authenticate(self, email, password):
-        '''Perform an authentication check with an email and password'''
+    def find_by_email_password(self, email, password):
+        '''Find an account with the given email address and password'''
         account = self.find_by_email(email)
-        authentic = False
         if account is not None:
             # the salt is the first 64 characters of the password
             salt = account.password[:64]
-            authentic = salt_and_hash(password, salt) == account.password
-        return authentic
-
-
-def salt_and_hash(value, salt=None):
-    '''Salt and hash a value'''
-    if salt is None:
-        salt = sha256(uuid4().bytes).hexdigest()
-    return salt + sha256(str.encode(salt + value)).hexdigest()
-
-
-def get_accounts():
-    '''Get multiple accounts'''
-    return 'Not implemented'
+            if salt_and_hash(password, salt) != account.password:
+                account = None
+        return account
 
 
 def register(app, prefix):
     '''Register a blueprint for account operations to a Flask app'''
     blueprint = Blueprint('accounts', __name__)
-    blueprint.route('/accounts')(get_accounts)
+    blueprint.route('/accounts')(lambda: 'Not implemented')
     app.register_blueprint(blueprint, url_prefix=prefix)
