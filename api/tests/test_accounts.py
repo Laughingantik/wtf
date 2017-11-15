@@ -1,107 +1,165 @@
 # pylint: disable=missing-docstring,invalid-name
-from mock import patch, Mock
+from mock import patch
 from api.accounts import Account, AccountRepository
+
+
+TEST_EMAIL = 'foobar@gmail.com'
+TEST_PASSWORD_PLAIN = 'foobar123'
+TEST_PASSWORD_HASH = (
+    '67d765888ea8f71875dfe27334786bffdca070705ee97bd17bec85f8580f7f01'
+    + '012eab80b72cbfe663429219e920aee8cd17ba8893e302844682104ee88d3145'
+)
+TEST_USERNAME = 'foobar'
 
 
 @patch('api.accounts.uuid4')
 def test_account_defaults(mock_uuid4):
     # stub out uuid4 to return the same uuid for testing purposes
-    mock_uuid4.return_value = '048e8cf5-bf6f-4b39-ac97-6f9851f61b16'
+    uuid = '048e8cf5-bf6f-4b39-ac97-6f9851f61b16'
+    mock_uuid4.return_value = uuid
     account = Account()
-    assert account.uuid == '048e8cf5-bf6f-4b39-ac97-6f9851f61b16'
+    assert account.uuid == uuid
     assert account.email is None
     assert account.password is None
     assert account.username is None
 
 
 def test_account_construction():
+    uuid = 'eebcacc8-b2d4-11e7-abc4-cec278b6b50a'
     account = Account(
-        uuid='eebcacc8-b2d4-11e7-abc4-cec278b6b50a',
-        email='foobar@gmail.com',
-        password='foobar123',
-        username='foobar'
+        uuid=uuid,
+        email=TEST_EMAIL,
+        password=TEST_PASSWORD_HASH,
+        username=TEST_USERNAME
     )
-    assert account.uuid == 'eebcacc8-b2d4-11e7-abc4-cec278b6b50a'
-    assert account.email == 'foobar@gmail.com'
-    assert account.password == 'foobar123'
-    assert account.username == 'foobar'
+    assert account.uuid == uuid
+    assert account.email == TEST_EMAIL
+    assert account.password == TEST_PASSWORD_HASH
+    assert account.username == TEST_USERNAME
 
 
-@patch('api.accounts.sha256')
-def test_account_setters(mock_sha256):
-    # stub out sha256 to return the same hashes for testing purposes
-    hash1 = Mock()
-    hash1.hexdigest = Mock(
-        return_value=(
-            '67d765888ea8f71875dfe27334786bffdca070705ee97bd17bec85f8580f7f01'
-        )
-    )
-    hash2 = Mock()
-    hash2.hexdigest = Mock(
-        return_value=(
-            '012eab80b72cbfe663429219e920aee8cd17ba8893e302844682104ee88d3145'
-        )
-    )
-    mock_sha256.side_effect = [hash1, hash2]
+@patch('api.accounts.salt_and_hash')
+def test_account_setters(mock_salt_and_hash):
+    # stub out salt_and_hash to return the same hashes for testing purposes
+    uuid = '60d0d4a4-3159-467d-a972-cd8a386931c4'
+    mock_salt_and_hash.return_value = TEST_PASSWORD_HASH
     account = Account()
-    account.uuid = '60d0d4a4-3159-467d-a972-cd8a386931c4'
-    assert account.uuid == '60d0d4a4-3159-467d-a972-cd8a386931c4'
-    account.email = 'foobar@gmail.com'
-    assert account.email == 'foobar@gmail.com'
-    account.password = 'foobar123'
-    assert account.password == (
-        '67d765888ea8f71875dfe27334786bffdca070705ee97bd17bec85f8580f7f01'
-        + '012eab80b72cbfe663429219e920aee8cd17ba8893e302844682104ee88d3145'
-    )
-    account.username = 'foobar'
-    assert account.username == 'foobar'
+    account.uuid = uuid
+    assert account.uuid == uuid
+    account.email = TEST_EMAIL
+    assert account.email == TEST_EMAIL
+    account.password = TEST_PASSWORD_PLAIN
+    assert account.password == TEST_PASSWORD_HASH
+    account.username = TEST_USERNAME
+    assert account.username == TEST_USERNAME
+
+
+def test_account_equality():
+    assert Account() != Account()
+
+
+def test_account_equality_uuid():
+    account1 = Account(uuid='test')
+    account2 = Account(uuid='test')
+    assert account1 == account2
+    account2.uuid = 'asdf'
+    assert account1 != account2
+
+
+def test_account_equality_email():
+    account1 = Account(uuid='test', password='test')
+    account2 = Account(uuid='test', password='test')
+    assert account1 == account2
+    account2.password = 'asdf'
+    assert account1 != account2
+    # the same password will always be different after salting and hashing:
+    account1 = Account(uuid='test')
+    account1.password = 'test'
+    account2 = Account(uuid='test')
+    account2.password = 'test'
+    assert account1 != account2
+
+
+def test_account_equality_password():
+    account1 = Account(uuid='test', email='test')
+    account2 = Account(uuid='test', email='test')
+    assert account1 == account2
+    account2.email = 'asdf'
+    assert account1 != account2
+
+
+def test_account_equality_username():
+    account1 = Account(uuid='test', username='test')
+    account2 = Account(uuid='test', username='test')
+    assert account1 == account2
+    account2.username = 'asdf'
+    assert account1 != account2
+
+
+def test_account_equality_misc():
+    assert Account() != 'asdf'
+    assert Account() != 123
+    assert Account() != {}
+    assert Account() != ()
+    assert Account() != None
 
 
 def test_find_account_by_uuid():
-    account = Account()
-    account.username = 'foobar'
+    account = Account(username=TEST_USERNAME)
     repo = AccountRepository()
     repo.save(account)
-    assert repo.find_by_uuid(account.uuid).username == 'foobar'
+    # todo: weak equality check
+    assert repo.find_by_uuid(account.uuid) == account
     assert repo.find_by_uuid('asdf') is None
 
 
 def test_find_account_by_email():
-    account = Account()
-    account.email = 'foobar@gmail.com'
+    account = Account(email=TEST_EMAIL)
     repo = AccountRepository()
     repo.save(account)
-    assert repo.find_by_email(account.email).uuid == account.uuid
+    # todo: weak equality check
+    assert repo.find_by_email(TEST_EMAIL) == account
     assert repo.find_by_email('asdf') is None
 
 
 def test_find_account_by_username():
-    account = Account()
-    account.username = 'foobar'
+    account = Account(username=TEST_USERNAME)
     repo = AccountRepository()
     repo.save(account)
-    assert repo.find_by_username(account.username).uuid == account.uuid
+    # todo: weak equality check
+    assert repo.find_by_username(TEST_USERNAME) == account
     assert repo.find_by_username('asdf') is None
 
 
-def test_account_authentication():
-    account = Account()
-    account.email = 'foobar@gmail.com'
-    account.password = 'foobar123'
+def test_find_account_by_email_password():
+    expected = Account(email=TEST_EMAIL)
+    # salt and hash the password:
+    expected.password = TEST_PASSWORD_PLAIN
     repo = AccountRepository()
-    repo.save(account)
-    assert repo.authenticate('foobar@gmail.com', 'foobar123')
+    repo.save(expected)
+    actual = repo.find_by_email_password(TEST_EMAIL, TEST_PASSWORD_PLAIN)
+    assert actual == expected
 
 
-def test_account_authentication_password_mismatch():
-    account = Account()
-    account.email = 'foobar@gmail.com'
-    account.password = 'foobar123'
+def test_find_account_by_email_password_incorrect_password():
     repo = AccountRepository()
-    repo.save(account)
-    assert not repo.authenticate('foobar@gmail.com', 'asdf42')
+    repo.save(Account(email=TEST_EMAIL, password=TEST_PASSWORD_HASH))
+    assert repo.find_by_email_password(TEST_EMAIL, 'asdf42') is None
 
 
-def test_account_authentication_account_not_found():
+def test_find_account_by_email_password_not_found():
     repo = AccountRepository()
-    assert not repo.authenticate('foobar@gmail.com', 'foobar123')
+    assert repo.find_by_email_password(TEST_EMAIL, TEST_PASSWORD_PLAIN) is None
+
+
+def test_persist_accounts_across_repo_instances():
+    account = Account(email=TEST_EMAIL, username=TEST_USERNAME)
+    repo1 = AccountRepository()
+    repo1.save(account)
+    assert repo1.find_by_uuid(account.uuid) == account
+    assert repo1.find_by_email(account.email) == account
+    assert repo1.find_by_username(account.username) == account
+    repo2 = AccountRepository()
+    assert repo2.find_by_uuid(account.uuid) == account
+    assert repo2.find_by_email(account.email) == account
+    assert repo2.find_by_username(account.username) == account
